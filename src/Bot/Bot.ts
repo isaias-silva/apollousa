@@ -14,15 +14,25 @@ export default class Bot {
     }
     this._io = new TelegramBot(this._key, { polling: true });
     if (this._io) {
-      console.log("bot connected");
+      console.log("[!] bot connected");
     }
   }
   private async interact() {
     if (!this._io) {
       throw "bot not conected";
     }
-    this._io.on("message", (msg) => {
+    console.log("[!] bot interact");
+
+    this._io.on("message", async (msg) => {
       if (msg.entities && msg?.entities[0]?.type == "bot_command") {
+        if (msg.chat.id && msg?.from?.id) {
+          const dataUser= await this._io?.getChatMember(
+            msg.chat.id,
+            msg?.from?.id.toString()
+          );
+          console.log(`[!] ${dataUser?.user.first_name} -> ${msg.text}`);
+        }
+       
         checkComands(this, msg);
       }
     });
@@ -32,13 +42,17 @@ export default class Bot {
     await this.connect();
     this.interact();
   }
-  public async sendMessage(id?: number, text?: string,replyId?:number) {
+  public async sendMessage(id?: number, text?: string, replyId?: number) {
     if (!this._io) {
       throw "bot not conected";
     }
-    if(!id || !text){
-      return
+    if (!id || !text) {
+      return;
     }
-    await this._io.sendMessage(id, text,{reply_to_message_id:replyId});
+    let object = {};
+    if (replyId) {
+      object = { reply_to_message_id: replyId };
+    }
+    await this._io.sendMessage(id, text, object);
   }
 }
