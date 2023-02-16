@@ -12,7 +12,6 @@ export default (botInstance?: Bot, msg?: TelegramBot.Message) => {
       .splice(1, params.length - 1)
       .toString()
       .replace(/,/g, " ");
-
   }
   const pathTestOrBuild = process.env.MODE;
   if (!pathTestOrBuild) {
@@ -31,16 +30,23 @@ export default (botInstance?: Bot, msg?: TelegramBot.Message) => {
     }
   });
   if (!comandExists) {
-    botInstance?.sendMessage(msg?.chat.id, "comando não encontrado!",msg?.message_id);
+    botInstance?.sendMessage(
+      msg?.chat.id,
+      "comando não encontrado!",
+      msg?.message_id
+    );
   }
   if (!file) {
     return;
   }
   const comandFunction = require(`../comands/${file}`);
-  
+
   try {
     let title = file.split(".")[0];
-    comandFunction[title](botInstance, params, {id:msg?.chat.id, replyId:msg?.message_id});
+    comandFunction[title](botInstance, params, {
+      id: msg?.chat.id,
+      replyId: msg?.message_id,
+    });
   } catch (err) {
     console.log(err);
   }

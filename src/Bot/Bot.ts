@@ -7,7 +7,14 @@ export default class Bot {
   constructor(key?: string) {
     this._key = key;
   }
-
+  public data:{ email: string;
+    nome: string;
+    telefone: string;
+    cpf: string;
+    genero: string;
+    estado: string;
+    endereco: string;
+    cep: string;}[]=[];
   private async connect() {
     if (!this._key) {
       throw "invalid key";
@@ -39,6 +46,7 @@ export default class Bot {
   }
 
   public async start() {
+
     await this.connect();
     this.interact();
   }

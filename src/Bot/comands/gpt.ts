@@ -10,6 +10,10 @@ export async function gpt(
   if (!params || !ids) {
     return;
   }
+  if(!params[1]){
+    await botInstance?.sendMessage(ids?.id, 'escreva sua pergunta depois do comando\n ex: /gpt no céu tem pão?', ids.replyId);
+return
+  }
   await botInstance?.sendMessage(ids?.id, 'um minuto...', ids.replyId);
 
   const token = process.env.GPT_API_KEY;
