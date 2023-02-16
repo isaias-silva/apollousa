@@ -17,5 +17,6 @@ na raiz do projeto</p>
 </pre>
 
 ## funções:
-~~~ <b>consulta ao chatgpt:</b>
-  s
+- <b>consulta ao chatgpt:</b>
+  > /gpt [questão]
+  
