@@ -13,7 +13,5 @@ na raiz do projeto</p>
  MODE='colocar "src" para teste ou "build" caso o projeto já esteja compilado para js'
 </pre>
 
-## funções:
-- <b>consulta ao chatgpt:</b>
-  > /gpt [questão]
+
   
