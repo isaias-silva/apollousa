@@ -1,15 +1,16 @@
 
 import dotenv from 'dotenv'
-import { DefaultChatBot, DefaultTransporter } from 'gear-roboto'
 import { TelegramEngine } from './TelegramEngine'
+import commander from './commands'
+import {DefaultChatBot, DefaultTransporter} from 'gear-roboto'
 
 dotenv.config()
-const apiKey = process.env.API_KEY || ""
+const apiKey = process.env.API_KEY
 
-async function main() {
+if (apiKey) {
 
-    console.log('start bot')
-    const chatbot = new DefaultChatBot(new TelegramEngine(apiKey), new DefaultTransporter())
-    await chatbot.init()
+    new DefaultChatBot(new TelegramEngine(apiKey, commander), new DefaultTransporter(true)).init()
+
+} else {
+    throw new Error("please define API_KEY in enviroment variables.")
 }
-main()

@@ -1,6 +1,13 @@
-import { DefaultCommander, DefaultEngine, IMessageReceived, IMessageSend } from "gear-roboto";
-
 import TelApi from "node-telegram-bot-api";
+
+import { CustomSendOptions } from "./interfaces/CustomSendOptions";
+import {
+    DefaultCommander,
+    DefaultEngine,
+    IMessageReceived,
+    IMessageSend
+} from "gear-roboto";
+
 
 export class TelegramEngine extends DefaultEngine {
     private telApi?: TelApi;
@@ -15,6 +22,15 @@ export class TelegramEngine extends DefaultEngine {
         try {
             if (!this.telApi) {
                 this.telApi = new TelApi(this.apiKey)
+                await this.telApi.startPolling({ polling: true })
+
+                const adInfo = new Map<String, String>()
+                adInfo.set("id", (await this.telApi.getMe()).id.toString())
+
+                this.getEmitter().emit('g.conn', {
+                    status: "connected",
+                    adInfo
+                })
 
                 this.monitoring()
             }
@@ -31,17 +47,15 @@ export class TelegramEngine extends DefaultEngine {
             this.telApi = undefined
         }
     }
+
     async send(to: string, message: IMessageSend): Promise<void> {
         const { type, text, media, reply } = message
-
-        const params: TelApi.SendMediaGroupOptions = {}
-        const paramsFile: { caption?: string, reply_to_message_id?: number } = {};
+        const params: CustomSendOptions = {}
         if (reply) {
             params["reply_to_message_id"] = parseInt(reply)
-            paramsFile["reply_to_message_id"] = parseInt(reply)
         }
-        if (type != 'text') {
-            paramsFile["caption"] = text
+        if (type != "text") {
+            params['caption'] = text
         }
         switch (type) {
             case "text":
@@ -50,36 +64,64 @@ export class TelegramEngine extends DefaultEngine {
                 break;
             case "image":
                 if (media)
-                    this.telApi?.sendPhoto(to, media, paramsFile)
+                    this.telApi?.sendPhoto(to, media, params)
                 break;
             case "document":
             case "file":
                 if (media)
-                    this.telApi?.sendDocument(to, media, paramsFile)
+                    this.telApi?.sendDocument(to, media, params)
                 break;
             case "video":
                 if (media)
-                    this.telApi?.sendVideo(to, media, paramsFile)
-
+                    this.telApi?.sendVideo(to, media, params)
                 break;
+            case "audio":
+                if (media)
+                    this.telApi?.sendVoice(to, media, params)
 
+                break
         }
     }
     protected async monitoring(): Promise<void> {
 
-        await this.telApi?.startPolling()
+        if (!this.telApi) {
+            return
+        }
+        this.telApi.on("message", (msg) => {
 
-        this.telApi?.on("message", (msg) => {
-            const { text, chat, message_id, video, audio, photo, document } = msg
-            const messageObj: IMessageReceived = {
-                text,
-                type: photo ? "image" : video ? "video" : "text",
-                author: chat.id.toString(),
-                isGroup: false,
-                messageId: message_id.toString()
+            const message = this.generateMessageReceivedObject(msg)
+            if (this.commander) {
+                this.treatCommands(message);
             }
-            this.logger.info(text)
-        })
 
+
+            this.getEmitter().emit("g.msg", message)
+        })
+    }
+    private generateMessageReceivedObject(msg: TelApi.Message) {
+        const { text, caption, chat, message_id, photo, video, audio, voice, document } = msg
+        const message: IMessageReceived = {
+            text: text || caption,
+            author: chat.id.toString(),
+            type: photo ? "image" : video ? "video" : audio || voice ? "audio" : document ? "document" : "text",
+            isGroup: chat.title ? true : false,
+            messageId: message_id.toString()
+
+        }
+        return message
+    }
+    private treatCommands = async (msg: IMessageReceived) => {
+        if (!msg.text) {
+            return
+        }
+        if (this.commander?.isCommand(msg.text)) {
+            const data = this.commander.extractCommandAndArgs(msg.text)
+            const commandFn = this.commander.searchCommand(data.command)
+            if (commandFn) {
+                commandFn(this, msg.author, data.args, msg)
+            } else {
+                this.send(msg.author, { type: "text", reply: msg.messageId, text: "comando não encontrado" })
+            }
+        }
     }
 }
