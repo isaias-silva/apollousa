@@ -1,4 +1,4 @@
-import TelApi, { PhotoSize } from "node-telegram-bot-api";
+import TelApi from "node-telegram-bot-api";
 
 import { CustomSendOptions } from "./interfaces/CustomSendOptions";
 import {
@@ -7,6 +7,9 @@ import {
     IMessageReceived,
     IMessageSend
 } from "gear-roboto";
+import { createWriteStream } from "fs";
+import path from "path";
+import { pipeline } from "stream/promises";
 
 
 export class TelegramEngine extends DefaultEngine {
@@ -16,6 +19,7 @@ export class TelegramEngine extends DefaultEngine {
         super(cm);
 
     }
+
 
     async connect(args: string[]): Promise<void> {
 
@@ -103,11 +107,11 @@ export class TelegramEngine extends DefaultEngine {
         })
     }
     private async generateMessageReceivedObject(msg: TelApi.Message) {
-        const { text, caption, chat, message_id, photo, video, audio, voice, document } = msg
+        const { text, caption, chat, message_id, photo, video, audio, voice, document, sticker } = msg
         const message: IMessageReceived = {
             text: text || caption,
             author: chat.id.toString(),
-            type: photo ? "image" : video ? "video" : audio || voice ? "audio" : document ? "document" : "text",
+            type: photo ? "image" : video ? "video" : audio || voice ? "audio" : document ? "document" : sticker ? "sticker" : "text",
             isGroup: chat.title ? true : false,
             messageId: message_id.toString(),
 
@@ -120,12 +124,14 @@ export class TelegramEngine extends DefaultEngine {
         return message
     }
     private async getMessageBuffer(msg: TelApi.Message) {
-        const { photo, video, audio, voice, document } = msg
+        const { photo, video, audio, voice, document, sticker } = msg
         let image;
         if (photo) {
-            image = photo[0]
+            image = photo[photo.length - 1]
         }
-        const fileId = (image || video || audio || voice || document)?.file_id
+        let file = (image || video || audio || voice || document || sticker);
+        
+        const fileId = file?.file_id
 
         if (!fileId) {
             return
@@ -137,11 +143,13 @@ export class TelegramEngine extends DefaultEngine {
             throw new Error('Stream is not available');
 
         }
-        let buffer = Buffer.alloc(0);
-        for await (let chunk of stream) {
-            buffer = Buffer.concat([buffer, chunk])
-        }
-        return buffer
+        const filePath = path.join(__dirname, '..', 'assets', "temp", `${fileId}.bin`);
+
+        const writeStream = createWriteStream(filePath);
+
+        await pipeline(stream, writeStream);
+        return filePath
+
     }
     private treatCommands = async (msg: IMessageReceived) => {
         if (!msg.text) {
