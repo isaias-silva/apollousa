@@ -1,4 +1,4 @@
-import TelApi from "node-telegram-bot-api";
+import TelApi, { PhotoSize } from "node-telegram-bot-api";
 
 import { CustomSendOptions } from "./interfaces/CustomSendOptions";
 import {
@@ -80,6 +80,10 @@ export class TelegramEngine extends DefaultEngine {
                     this.telApi?.sendVoice(to, media, params)
 
                 break
+            case "sticker":
+                if (media)
+                    this.telApi?.sendSticker(to, media, params)
+                break
         }
     }
     protected async monitoring(): Promise<void> {
@@ -87,9 +91,9 @@ export class TelegramEngine extends DefaultEngine {
         if (!this.telApi) {
             return
         }
-        this.telApi.on("message", (msg) => {
+        this.telApi.on("message", async (msg) => {
 
-            const message = this.generateMessageReceivedObject(msg)
+            const message = await this.generateMessageReceivedObject(msg)
             if (this.commander) {
                 this.treatCommands(message);
             }
@@ -98,17 +102,46 @@ export class TelegramEngine extends DefaultEngine {
             this.getEmitter().emit("g.msg", message)
         })
     }
-    private generateMessageReceivedObject(msg: TelApi.Message) {
+    private async generateMessageReceivedObject(msg: TelApi.Message) {
         const { text, caption, chat, message_id, photo, video, audio, voice, document } = msg
         const message: IMessageReceived = {
             text: text || caption,
             author: chat.id.toString(),
             type: photo ? "image" : video ? "video" : audio || voice ? "audio" : document ? "document" : "text",
             isGroup: chat.title ? true : false,
-            messageId: message_id.toString()
+            messageId: message_id.toString(),
+
 
         }
+        if (message.type != "text") {
+            message.media = await this.getMessageBuffer(msg)
+        }
+
         return message
+    }
+    private async getMessageBuffer(msg: TelApi.Message) {
+        const { photo, video, audio, voice, document } = msg
+        let image;
+        if (photo) {
+            image = photo[0]
+        }
+        const fileId = (image || video || audio || voice || document)?.file_id
+
+        if (!fileId) {
+            return
+        }
+        const stream = this.telApi?.getFileStream(fileId);
+
+        if (!stream) {
+
+            throw new Error('Stream is not available');
+
+        }
+        let buffer = Buffer.alloc(0);
+        for await (let chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk])
+        }
+        return buffer
     }
     private treatCommands = async (msg: IMessageReceived) => {
         if (!msg.text) {

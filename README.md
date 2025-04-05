@@ -1,5 +1,5 @@
 # apollousa_Bot
-<img src='./icon.png' />
+<img src='assets/icon.png' />
 
 <p>bot desenvolvido para telegram com uso da linguagem typescript
 e a lib oficial do telegram!

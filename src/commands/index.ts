@@ -1,10 +1,11 @@
 
 import { DefaultCommander } from "gear-roboto";
-import hello from "./hello";
+import path from "path";
 
 
-const commander = new DefaultCommander("/")
 
-commander.addCommand(hello.name, hello)
+const commander = new DefaultCommander(["/","#","."])
+
+commander.addCommandsByPath(path.resolve("src","commands"))
 
 export default commander;
