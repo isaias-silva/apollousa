@@ -1,17 +1,14 @@
-# apollousa_Bot
-<img src='assets/icon.png' />
+<h1>Apollousa_Bot</h1>
 
-<p>bot desenvolvido para telegram com uso da linguagem typescript
-e a lib oficial do telegram!
+<img src="assets/icon.png" alt="Apollousa Bot Icon" style="width: 150px; height: auto;" />
+
+<p>
+  Este é um bot desenvolvido para o <strong>Telegram</strong> utilizando a linguagem <strong>TypeScript</strong>,
+  a <strong>biblioteca oficial do Telegram</strong> e a biblioteca de chatbot 
+  <a href="https://github.com/gear-robot/gear" target="_blank" rel="noopener noreferrer">Gear Roboto</a>!
 </p>
 
-## avisos:
-<p>é necessário usar os tokens do telegram para funcionamento do bot em um arquivo <b>.env</b>
-na raiz do projeto</p>
-<pre>
- TELEGRAM_API_KEY='token da api do telegram'
- MODE='colocar "src" para teste ou "build" caso o projeto já esteja compilado para js'
-</pre>
-
-
-  
+<p>
+  O Apollousa_Bot serve como uma base extensível, permitindo a criação de diversos comandos personalizados
+  por meio da estrutura de <strong>CommanderFunctions</strong>.
+</p>
