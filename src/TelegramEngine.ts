@@ -7,6 +7,9 @@ import {
     IMessageReceived,
     IMessageSend
 } from "gear-roboto";
+import { createWriteStream } from "fs";
+import path from "path";
+import { pipeline } from "stream/promises";
 
 
 export class TelegramEngine extends DefaultEngine {
@@ -17,7 +20,9 @@ export class TelegramEngine extends DefaultEngine {
 
     }
 
+
     async connect(args: string[]): Promise<void> {
+
         try {
             if (!this.telApi) {
                 this.telApi = new TelApi(this.apiKey)
@@ -34,6 +39,7 @@ export class TelegramEngine extends DefaultEngine {
                 this.monitoring()
             }
         } catch (err) {
+            this.logger.error(err)
             this.disconnect(args)
         }
 
@@ -78,6 +84,10 @@ export class TelegramEngine extends DefaultEngine {
                     this.telApi?.sendVoice(to, media, params)
 
                 break
+            case "sticker":
+                if (media)
+                    this.telApi?.sendSticker(to, media, params)
+                break
         }
     }
     protected async monitoring(): Promise<void> {
@@ -85,9 +95,9 @@ export class TelegramEngine extends DefaultEngine {
         if (!this.telApi) {
             return
         }
-        this.telApi.on("message", (msg) => {
+        this.telApi.on("message", async (msg) => {
 
-            const message = this.generateMessageReceivedObject(msg)
+            const message = await this.generateMessageReceivedObject(msg)
             if (this.commander) {
                 this.treatCommands(message);
             }
@@ -96,17 +106,50 @@ export class TelegramEngine extends DefaultEngine {
             this.getEmitter().emit("g.msg", message)
         })
     }
-    private generateMessageReceivedObject(msg: TelApi.Message) {
-        const { text, caption, chat, message_id, photo, video, audio, voice, document } = msg
+    private async generateMessageReceivedObject(msg: TelApi.Message) {
+        const { text, caption, chat, message_id, photo, video, audio, voice, document, sticker } = msg
         const message: IMessageReceived = {
             text: text || caption,
             author: chat.id.toString(),
-            type: photo ? "image" : video ? "video" : audio || voice ? "audio" : document ? "document" : "text",
+            type: photo ? "image" : video ? "video" : audio || voice ? "audio" : document ? "document" : sticker ? "sticker" : "text",
             isGroup: chat.title ? true : false,
-            messageId: message_id.toString()
+            messageId: message_id.toString(),
+
 
         }
+        if (message.type != "text") {
+            message.media = await this.getMessageBuffer(msg)
+        }
+
         return message
+    }
+    private async getMessageBuffer(msg: TelApi.Message) {
+        const { photo, video, audio, voice, document, sticker } = msg
+        let image;
+        if (photo) {
+            image = photo[photo.length - 1]
+        }
+        let file = (image || video || audio || voice || document || sticker);
+        
+        const fileId = file?.file_id
+
+        if (!fileId) {
+            return
+        }
+        const stream = this.telApi?.getFileStream(fileId);
+
+        if (!stream) {
+
+            throw new Error('Stream is not available');
+
+        }
+        const filePath = path.join(__dirname, '..', 'assets', "temp", `${fileId}.bin`);
+
+        const writeStream = createWriteStream(filePath);
+
+        await pipeline(stream, writeStream);
+        return filePath
+
     }
     private treatCommands = async (msg: IMessageReceived) => {
         if (!msg.text) {
