@@ -14,3 +14,4 @@ if (apiKey) {
 } else {
     throw new Error("please define API_KEY in enviroment variables.")
 }
+
