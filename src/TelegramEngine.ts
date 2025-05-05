@@ -16,7 +16,7 @@ export class TelegramEngine extends DefaultEngine {
     private telApi?: TelApi;
 
     constructor(private apiKey: string, cm?: DefaultCommander) {
-        super(cm);
+        super(false, cm);
 
     }
 
@@ -90,21 +90,27 @@ export class TelegramEngine extends DefaultEngine {
                 break
         }
     }
+    
     protected async monitoring(): Promise<void> {
-
-        if (!this.telApi) {
-            return
-        }
+        if (!this.telApi) return;
+    
         this.telApi.on("message", async (msg) => {
-
-            const message = await this.generateMessageReceivedObject(msg)
-            if (this.commander) {
-                this.treatCommands(message);
+            try {
+                const message = await this.generateMessageReceivedObject(msg);
+    
+                if (this.commander && message.text) {
+                    const isCommand = this.commander.isCommand(message.text);
+                    if (isCommand) {
+                        await this.treatCommands(message);
+                        return;
+                    }
+                }
+                this.getEmitter().emit("g.msg", message);
+    
+            } catch (err) {
+                console.error("Erro ao processar mensagem recebida:", err);
             }
-
-
-            this.getEmitter().emit("g.msg", message)
-        })
+        });
     }
     private async generateMessageReceivedObject(msg: TelApi.Message) {
         const { text, caption, chat, message_id, photo, video, audio, voice, document, sticker } = msg
@@ -114,7 +120,7 @@ export class TelegramEngine extends DefaultEngine {
             type: photo ? "image" : video ? "video" : audio || voice ? "audio" : document ? "document" : sticker ? "sticker" : "text",
             isGroup: chat.title ? true : false,
             messageId: message_id.toString(),
-
+            isMe: false
 
         }
         if (message.type != "text") {
@@ -130,7 +136,7 @@ export class TelegramEngine extends DefaultEngine {
             image = photo[photo.length - 1]
         }
         let file = (image || video || audio || voice || document || sticker);
-        
+
         const fileId = file?.file_id
 
         if (!fileId) {
@@ -155,7 +161,7 @@ export class TelegramEngine extends DefaultEngine {
         if (!msg.text) {
             return
         }
-        if (this.commander?.isCommand(msg.text)) {
+        if (this.commander) {
             const data = this.commander.extractCommandAndArgs(msg.text)
             const commandFn = this.commander.searchCommand(data.command)
             if (commandFn) {
