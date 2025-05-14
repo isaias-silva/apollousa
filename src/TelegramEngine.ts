@@ -16,7 +16,8 @@ export class TelegramEngine extends DefaultEngine {
     private telApi?: TelApi;
 
     constructor(private apiKey: string, cm?: DefaultCommander) {
-        super(false, cm);
+        super(true, cm);
+
 
     }
 
@@ -37,6 +38,11 @@ export class TelegramEngine extends DefaultEngine {
                 })
 
                 this.monitoring()
+
+                if (this.commander) {
+                    this.updateCommands()
+                }
+                if (this.enableLogs) this.logger.info("connected")
             }
         } catch (err) {
             this.logger.error(err)
@@ -47,13 +53,15 @@ export class TelegramEngine extends DefaultEngine {
     }
     async disconnect(args: string[]): Promise<void> {
         if (this.telApi) {
+            if (this.enableLogs) this.logger.warn("end connection")
+
             await this.telApi.stopPolling();
             this.telApi = undefined
         }
     }
 
     async send(to: string, message: IMessageSend): Promise<void> {
-        const { type, text, media, reply } = message
+        const { type, text, media, reply, opts } = message
         const params: CustomSendOptions = {}
         if (reply) {
             params["reply_to_message_id"] = parseInt(reply)
@@ -61,6 +69,19 @@ export class TelegramEngine extends DefaultEngine {
         if (type != "text") {
             params['caption'] = text
         }
+        if (opts) {
+
+            const inline_keyboard: { text: string, callback_data: string }[][] = [[]]
+
+            opts.forEach(opt => {
+                inline_keyboard[0].push({
+                    text: opt.text,
+                    callback_data: opt.value
+                })
+            })
+            params["reply_markup"] = { inline_keyboard }
+        }
+        await this.delay(1)
         switch (type) {
             case "text":
                 if (text)
@@ -84,20 +105,22 @@ export class TelegramEngine extends DefaultEngine {
                     this.telApi?.sendVoice(to, media, params)
 
                 break
+
             case "sticker":
                 if (media)
                     this.telApi?.sendSticker(to, media, params)
                 break
+
         }
     }
-    
+
     protected async monitoring(): Promise<void> {
         if (!this.telApi) return;
-    
+
         this.telApi.on("message", async (msg) => {
             try {
                 const message = await this.generateMessageReceivedObject(msg);
-    
+
                 if (this.commander && message.text) {
                     const isCommand = this.commander.isCommand(message.text);
                     if (isCommand) {
@@ -106,12 +129,42 @@ export class TelegramEngine extends DefaultEngine {
                     }
                 }
                 this.getEmitter().emit("g.msg", message);
-    
+
             } catch (err) {
-                console.error("Erro ao processar mensagem recebida:", err);
+                this.logger.error(err);
             }
         });
+        this.telApi.on("callback_query", async (msg) => {
+            const { data, message } = msg;
+            await this.telApi?.answerCallbackQuery(msg.id)
+            if (data && message) {
+                const { chat, message_id } = message
+
+                const messageRes: IMessageReceived = {
+                    text: data,
+                    author: chat.id.toString(),
+                    type: "text",
+                    isGroup: chat.title ? true : false,
+                    messageId: message_id.toString(),
+                    isMe: false
+
+                }
+                if (this.commander) {
+
+                    const isCommand = this.commander.isCommand(data);
+                    if (isCommand) {
+                        await this.treatCommands(messageRes);
+                        return;
+                    }
+                }
+                this.getEmitter().emit("g.msg", messageRes);
+
+            }
+
+
+        })
     }
+
     private async generateMessageReceivedObject(msg: TelApi.Message) {
         const { text, caption, chat, message_id, photo, video, audio, voice, document, sticker } = msg
         const message: IMessageReceived = {
@@ -170,5 +223,53 @@ export class TelegramEngine extends DefaultEngine {
                 this.send(msg.author, { type: "text", reply: msg.messageId, text: "comando não encontrado" })
             }
         }
+
+    }
+
+    private async delay(seconds: number) {
+        return new Promise(resolve => setTimeout(resolve, seconds * 1000));
+    }
+    private updateCommands = async () => {
+
+        const commandsInCommander = this.commander?.getAllCommands()
+        if (!commandsInCommander) {
+            return
+        }
+        const onlineCommands = await this.telApi?.getMyCommands()
+        const commandsKeys = [...commandsInCommander.keys()]
+
+        let update: boolean = false;
+
+        if (commandsInCommander && this.enableLogs)
+            this.logger.table(commandsInCommander)
+
+
+        if (onlineCommands) {
+            for (let commandKeys of commandsKeys) {
+                if (!onlineCommands.find(c => c.command.includes(commandKeys))) {
+
+                    update = true
+                }
+            }
+
+        } else {
+            update = true;
+        }
+        if (commandsInCommander && update) {
+            if (this.enableLogs) this.logger.info("update commands")
+
+            const commands: TelApi.BotCommand[] = commandsKeys.map(c => {
+                let command: TelApi.BotCommand = {
+                    command: c,
+                    description: c
+                }
+                return command
+            })
+
+            this.telApi?.setMyCommands(commands)
+        } else {
+            if (this.enableLogs) this.logger.warn("commands not updated")
+        }
+
     }
 }
