@@ -134,6 +134,7 @@ export class TelegramEngine extends DefaultEngine {
                 this.logger.error(err);
             }
         });
+
         this.telApi.on("callback_query", async (msg) => {
             const { data, message } = msg;
             await this.telApi?.answerCallbackQuery(msg.id)
@@ -166,16 +167,17 @@ export class TelegramEngine extends DefaultEngine {
     }
 
     private async generateMessageReceivedObject(msg: TelApi.Message) {
-        const { text, caption, chat, message_id, photo, video, audio, voice, document, sticker } = msg
+        const { text, caption, chat, message_id, photo, video, audio, voice, document, sticker, from } = msg
         const message: IMessageReceived = {
             text: text || caption,
-            author: chat.id.toString(),
+            author: from?.id && chat.id != from.id ? chat.id + "_" + from.id : chat.id.toString(),
             type: photo ? "image" : video ? "video" : audio || voice ? "audio" : document ? "document" : sticker ? "sticker" : "text",
             isGroup: chat.title ? true : false,
             messageId: message_id.toString(),
             isMe: false
 
         }
+       
         if (message.type != "text") {
             message.media = await this.getMessageBuffer(msg)
         }

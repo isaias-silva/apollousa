@@ -1,17 +1,17 @@
-import {DefaultTransporter, IFlowResponse } from "gear-roboto";
+import { DefaultTransporter, IFlowResponse } from "gear-roboto";
 
 export class Transporter extends DefaultTransporter {
 
     protected treatInfoFlow(msg: IFlowResponse): void {
         const { messages } = msg
 
-        let content: any={};
-        for (const message of messages) {
-            const [key, messageFlow] = message
 
-            content[messageFlow.getName()] = messageFlow.getResponse()?.text
-        }
 
-        console.table(content)
+        console.table(messages.map(m => {
+            const question = m.getMessages().map(v => v.text).join(" ")
+            const response = m.getResponse()?.text
+
+            return { question, response }
+        }))
     }
 }

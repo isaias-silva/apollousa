@@ -1,5 +1,5 @@
 
-import { DefaultFlow, DefaultMessageFlow, KeyWordMessageFlow } from "gear-roboto";
+import { DefaultFlow, KeyWordMessageFlow, StoreMessageFlow } from "gear-roboto";
 
 const flow = new DefaultFlow();
 
@@ -18,7 +18,7 @@ const questionOne = new KeyWordMessageFlow(
 );
 
 
-const notInterested = new DefaultMessageFlow("why", [
+const notInterested = new StoreMessageFlow("why", [
     { type: "text", text: "Tudo bem! Poderia nos dizer por que não?" }
 ]);
 
@@ -29,7 +29,7 @@ const questions = [
     { name: "profissao", question: "Qual sua profissão?" },
 
 
-].map(q => new DefaultMessageFlow(q.name, [{ type: "text", text: q.question }]));
+].map(q => new StoreMessageFlow(q.name, [{ type: "text", text: q.question }]));
 
 
 questionOne.setNextErrorId(notInterested.getId());
