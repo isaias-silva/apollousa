@@ -81,7 +81,7 @@ export class TelegramEngine extends DefaultEngine {
             })
             params["reply_markup"] = { inline_keyboard }
         }
-        await this.delay(1)
+        await this.delay(1.5)
         switch (type) {
             case "text":
                 if (text)
@@ -139,11 +139,12 @@ export class TelegramEngine extends DefaultEngine {
             const { data, message } = msg;
             await this.telApi?.answerCallbackQuery(msg.id)
             if (data && message) {
-                const { chat, message_id } = message
+                const { chat, message_id, from } = message
 
                 const messageRes: IMessageReceived = {
                     text: data,
-                    author: chat.id.toString(),
+                    author: (from?.id || chat.id).toString(),
+                    chatId: chat.id.toString(),
                     type: "text",
                     isGroup: chat.title ? true : false,
                     messageId: message_id.toString(),
@@ -170,14 +171,15 @@ export class TelegramEngine extends DefaultEngine {
         const { text, caption, chat, message_id, photo, video, audio, voice, document, sticker, from } = msg
         const message: IMessageReceived = {
             text: text || caption,
-            author: from?.id && chat.id != from.id ? chat.id + "_" + from.id : chat.id.toString(),
+            author: (from?.id || chat.id).toString(),
+            chatId: chat.id.toString(),
             type: photo ? "image" : video ? "video" : audio || voice ? "audio" : document ? "document" : sticker ? "sticker" : "text",
             isGroup: chat.title ? true : false,
             messageId: message_id.toString(),
             isMe: false
 
         }
-       
+
         if (message.type != "text") {
             message.media = await this.getMessageBuffer(msg)
         }
@@ -220,9 +222,9 @@ export class TelegramEngine extends DefaultEngine {
             const data = this.commander.extractCommandAndArgs(msg.text)
             const commandFn = this.commander.searchCommand(data.command)
             if (commandFn) {
-                commandFn(this, msg.author, data.args, msg)
+                commandFn(this, msg.chatId, data.args, msg)
             } else {
-                this.send(msg.author, { type: "text", reply: msg.messageId, text: "comando não encontrado" })
+                this.send(msg.chatId, { type: "text", reply: msg.messageId, text: "comando não encontrado" })
             }
         }
 

@@ -1,7 +1,14 @@
 
 import { DefaultFlow, KeyWordMessageFlow, StoreMessageFlow } from "gear-roboto";
 
-const flow = new DefaultFlow();
+const flow = new DefaultFlow("talk-me", {
+    enableLogs: true,
+    waitingTimeForResponseMs: 120000,
+    timeoutMessage: {
+        type: "text",
+        text: "devido a inatividade estamos encerrando essa conversa"
+    }
+});
 
 flow.setFirstMessage({ type: "text", text: "olá!" });
 
@@ -35,8 +42,11 @@ const questions = [
 questionOne.setNextErrorId(notInterested.getId());
 questionOne.setNextId(questions[0].getId());
 
-flow.addMessages(questionOne, notInterested);
+const dados = new StoreMessageFlow("data", [{ type: "text", text: "preciso que você responda seus:\n telefone para contato\nemail\nsalário\npaís onde mora:" }])
+dados.setResponseCount(3);
+questions[questions.length - 1].setNextId(dados.getId())
 
+flow.addMessages(questionOne, notInterested,dados);
 
 
 for (let i = 0; i < questions.length; i++) {

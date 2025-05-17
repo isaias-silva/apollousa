@@ -2,9 +2,8 @@
 import dotenv from 'dotenv'
 import { TelegramEngine } from './TelegramEngine'
 
-import { DefaultChatBot, DefaultTransporter } from 'gear-roboto'
+import { DefaultChatBot } from 'gear-roboto'
 import { Transporter } from './Transporter'
-import buildCommander from './commands'
 import commander from './commands'
 
 dotenv.config()

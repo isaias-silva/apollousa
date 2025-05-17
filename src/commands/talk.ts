@@ -4,11 +4,10 @@ import {
 } from "gear-roboto"
 import flow from "../flow/talk.flow";
 
-const talk: CommanderFunction = async (engine, author, args, message) => {
-    let to = author;
+const talk: CommanderFunction = async (engine, chatId, args, message) => {
+    let to = chatId;
     if (message?.isGroup) {
-        const [group, member] = author.split("_")
-        to = member
+        to = message.author
     }
     engine.startFlowInEngine(to, flow);
 };
