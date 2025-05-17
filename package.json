@@ -24,7 +24,7 @@
     "csv-reader": "^1.0.11",
     "dotenv": "^16.0.3",
     "file-type": "^20.4.1",
-    "gear-roboto": "^2.2.0",
+    "gear-roboto": "^2.2.2",
     "node-telegram-bot-api": "^0.66.0"
   }
 }

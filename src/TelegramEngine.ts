@@ -17,11 +17,7 @@ export class TelegramEngine extends DefaultEngine {
 
     constructor(private apiKey: string, cm?: DefaultCommander) {
         super(true, cm);
-
-
     }
-
-
     async connect(args: string[]): Promise<void> {
 
         try {
@@ -42,7 +38,7 @@ export class TelegramEngine extends DefaultEngine {
                 if (this.commander) {
                     this.updateCommands()
                 }
-                if (this.enableLogs) this.logger.info("connected")
+
             }
         } catch (err) {
             this.logger.error(err)
@@ -168,7 +164,13 @@ export class TelegramEngine extends DefaultEngine {
     }
 
     private async generateMessageReceivedObject(msg: TelApi.Message) {
-        const { text, caption, chat, message_id, photo, video, audio, voice, document, sticker, from } = msg
+        const { text, caption, chat, message_id, photo, video, audio, voice, document, sticker, from, reply_to_message } = msg
+
+        let replyMessage: IMessageReceived | undefined;
+       
+        if (reply_to_message) {
+            replyMessage = await this.generateMessageReceivedObject(reply_to_message)
+        }
         const message: IMessageReceived = {
             text: text || caption,
             author: (from?.id || chat.id).toString(),
@@ -176,7 +178,9 @@ export class TelegramEngine extends DefaultEngine {
             type: photo ? "image" : video ? "video" : audio || voice ? "audio" : document ? "document" : sticker ? "sticker" : "text",
             isGroup: chat.title ? true : false,
             messageId: message_id.toString(),
-            isMe: false
+            isMe: false,
+            replyMessage
+
 
         }
 
@@ -218,8 +222,10 @@ export class TelegramEngine extends DefaultEngine {
         if (!msg.text) {
             return
         }
+
         if (this.commander) {
-            const data = this.commander.extractCommandAndArgs(msg.text)
+            const realCommand = msg.text.replace("@", " ")
+            const data = this.commander.extractCommandAndArgs(realCommand)
             const commandFn = this.commander.searchCommand(data.command)
             if (commandFn) {
                 commandFn(this, msg.chatId, data.args, msg)
