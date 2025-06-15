@@ -28,7 +28,7 @@ export class TelegramEngine extends DefaultEngine {
                 const adInfo = new Map<String, String>()
                 adInfo.set("id", (await this.telApi.getMe()).id.toString())
 
-                this.getEmitter().emit('g.conn', {
+                this.getEmitter().emit('gear.connection.status', {
                     status: "connected",
                     adInfo
                 })
@@ -124,7 +124,7 @@ export class TelegramEngine extends DefaultEngine {
                         return;
                     }
                 }
-                this.getEmitter().emit("g.msg", message);
+                this.getEmitter().emit("gear.message.received", message);
 
             } catch (err) {
                 this.logger.error(err);
@@ -155,7 +155,7 @@ export class TelegramEngine extends DefaultEngine {
                         return;
                     }
                 }
-                this.getEmitter().emit("g.msg", messageRes);
+                this.getEmitter().emit("gear.message.received", messageRes);
 
             }
 
@@ -167,7 +167,7 @@ export class TelegramEngine extends DefaultEngine {
         const { text, caption, chat, message_id, photo, video, audio, voice, document, sticker, from, reply_to_message } = msg
 
         let replyMessage: IMessageReceived | undefined;
-       
+
         if (reply_to_message) {
             replyMessage = await this.generateMessageReceivedObject(reply_to_message)
         }
@@ -251,7 +251,7 @@ export class TelegramEngine extends DefaultEngine {
         let update: boolean = false;
 
         if (commandsInCommander && this.enableLogs)
-            this.logger.table(commandsInCommander)
+            console.table(commandsInCommander)
 
 
         if (onlineCommands) {
@@ -261,7 +261,14 @@ export class TelegramEngine extends DefaultEngine {
                     update = true
                 }
             }
+            if (!update) {
 
+                for (let onlineCommand of onlineCommands) {
+                    if (!commandsKeys.find(k => k.includes(onlineCommand.command))) {
+                        update = true
+                    }
+                }
+            }
         } else {
             update = true;
         }

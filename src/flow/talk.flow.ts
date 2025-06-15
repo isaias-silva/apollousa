@@ -42,11 +42,8 @@ const questions = [
 questionOne.setNextErrorId(notInterested.getId());
 questionOne.setNextId(questions[0].getId());
 
-const dados = new StoreMessageFlow("data", [{ type: "text", text: "preciso que você responda seus: \n telefone para contato\nemail\nsalário\npaís onde mora:" }])
-dados.setResponseCount(3);
-questions[questions.length - 1].setNextId(dados.getId())
 
-flow.addMessages(questionOne, notInterested,dados);
+flow.addMessages(questionOne, notInterested);
 
 
 for (let i = 0; i < questions.length; i++) {

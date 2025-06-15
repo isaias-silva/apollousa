@@ -4,7 +4,7 @@ import { TelegramEngine } from './TelegramEngine'
 
 import { DefaultChatBot } from 'gear-roboto'
 import { Transporter } from './Transporter'
-import commander from './commands'
+import commander from './commands/commander'
 
 dotenv.config()
 async function main() {
