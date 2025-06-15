@@ -7,7 +7,7 @@
 O **Apollousa_Bot** é um bot para o **Telegram**, desenvolvido em **TypeScript**, utilizando:
 
 - A **biblioteca oficial do Telegram** para Node.js
-- A estrutura de chatbot [**Gear Robot**](https://github.com/isaias-silva/gear-roboto)
+- A estrutura de chatbot [**Gear Roboto**](https://github.com/isaias-silva/gear-roboto)
 
 O projeto foi criado para ser uma **base extensível**, permitindo a criação de comandos personalizados com **registro automático de comandos** via API do Telegram.
 
